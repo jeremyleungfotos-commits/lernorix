@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#191e2b">
+  <meta name="description" content="Dein persönlicher Lernraum. Wissen entdecken, Aufgaben üben und Prüfungen vorbereiten – ohne Anmeldung.">
+  <title>Lernorix · Dein Lernraum</title>
+  <link rel="icon" href="assets/lernorix-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Zum Inhalt</a>
+  <button class="scrim" id="scrim" aria-label="Menü schliessen" hidden></button>
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="#home"><img src="assets/lernorix-mark.svg" alt="" width="46" height="46"><span>Lernorix<small>DEIN LERNRAUM</small></span></a>
+    <div class="nav-label">WORKSPACE</div>
+    <nav id="navigation" aria-label="Hauptnavigation"></nav>
+    <div class="sidebar-bottom">
+      <a href="#settings" class="settings-link" id="settings-link"></a>
+      <div class="local-note"><span class="status-dot"></span><div>Nur du. Dein Tempo.<small>Ohne Konto. Lokal gespeichert.</small></div></div>
+    </div>
+  </aside>
+  <div class="main-wrap">
+    <header class="topbar">
+      <div class="breadcrumb"><button class="icon-button menu-button" id="menu-button" aria-label="Menü öffnen" aria-expanded="false" aria-controls="sidebar">☰</button><span>Lernraum</span><span aria-hidden="true">/</span><strong id="breadcrumb">Übersicht</strong></div>
+      <div class="top-actions"><span class="topic-pill" id="topic-pill">Noch kein Thema</span><button class="icon-button" id="theme-button" aria-label="Dunkle Ansicht einschalten"></button></div>
+    </header>
+    <div id="storage-warning" class="storage-warning" role="status" hidden>Dein Browser kann den Fortschritt gerade nicht speichern. Lass diese Seite offen und sichere deinen Stand unter Einstellungen.</div>
+    <main id="main" tabindex="-1"><div class="panel">Lernraum wird geöffnet …</div></main>
+    <footer><span><span class="status-dot"></span> Dein Fortschritt bleibt bei dir.</span><a href="#sources">Quellen & Hilfe <span aria-hidden="true">↗</span></a></footer>
+  </div>
+  <div id="toast" role="status" class="toast" hidden></div>
+  <div id="print-area"></div>
+  <noscript><div class="noscript">Bitte aktiviere JavaScript, um Lernorix zu nutzen.</div></noscript>
+</body>
+</html>
