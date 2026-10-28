@@ -33,6 +33,13 @@
   </div>
   <div id="toast" role="status" class="toast" hidden></div>
   <div id="print-area"></div>
+  <dialog id="image-viewer" aria-labelledby="image-viewer-title">
+    <div class="image-viewer-toolbar"><h2 id="image-viewer-title">Bild genauer ansehen</h2><button type="button" class="btn" id="image-viewer-close" autofocus>Schliessen</button></div>
+    <div class="image-viewer-tools"><label for="image-zoom">Vergrösserung</label><input id="image-zoom" type="range" min="100" max="300" step="25" value="100"><output for="image-zoom">100 %</output><button type="button" class="btn" id="image-viewer-reset">Einpassen</button></div>
+    <p class="small muted">Zum Verschieben im Bild scrollen oder auf dem Touchscreen wischen. Mit Escape zurück zur Aufgabe.</p>
+    <div class="image-viewer-viewport" tabindex="0" role="region" aria-label="Vergrössertes Bild, zum Verschieben scrollen"><div class="image-viewer-content"></div></div>
+    <p id="image-viewer-caption" class="small muted"></p>
+  </dialog>
   <noscript><div class="noscript">Bitte aktiviere JavaScript, um Lernorix zu nutzen.</div></noscript>
 </body>
 </html>

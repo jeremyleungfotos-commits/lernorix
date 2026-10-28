@@ -4,6 +4,47 @@ import course from './course.js';
 import { LEVELS, TYPES, escapeHTML as e, percent, safeURL, validateCourse, filterQuestions, createSession, grade, newProgress, recordResult, topicStats, validateProgress } from './core.js';
 
 const $ = selector => document.querySelector(selector);
+// Native dialog keeps focus inside the image view and restores it on close.
+const imageViewer = $('#image-viewer');
+let imageTrigger;
+function resetImageZoom() {
+  $('#image-zoom').value = '100';
+  $('#image-viewer output').textContent = '100 %';
+  $('.image-viewer-content').style.width = '100%';
+  $('.image-viewer-viewport').scrollTo(0, 0);
+}
+$('#image-viewer-close').addEventListener('click', () => imageViewer.close());
+$('#image-viewer-reset').addEventListener('click', resetImageZoom);
+$('#image-zoom').addEventListener('input', event => {
+  $('.image-viewer-content').style.width = `${event.target.value}%`;
+  $('#image-viewer output').textContent = `${event.target.value} %`;
+});
+imageViewer.addEventListener('close', () => {
+  document.body.classList.remove('viewing-image');
+  $('.image-viewer-content').replaceChildren();
+  if (imageTrigger?.isConnected) imageTrigger.focus({preventScroll:true});
+});
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('#main .learning-media a, #main [data-image-zoom]');
+  if (!trigger || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  const figure = trigger.closest('figure');
+  const source = figure.querySelector('.hotspot-canvas') || figure.querySelector('img');
+  const copy = source.cloneNode(true);
+  for (const pin of copy.querySelectorAll('button')) {
+    const label = document.createElement('span');
+    label.className = pin.className;
+    label.style.cssText = pin.style.cssText;
+    label.textContent = pin.textContent;
+    pin.replaceWith(label);
+  }
+  $('.image-viewer-content').replaceChildren(copy);
+  $('#image-viewer-caption').textContent = figure.querySelector('figcaption')?.textContent || source.alt || '';
+  imageTrigger = trigger;
+  resetImageZoom();
+  imageViewer.showModal();
+  document.body.classList.add('viewing-image');
+});
 const icons = {
   home: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   book: '<path d="M12 5v15M3 4c4-1 6 0 9 2 3-2 5-3 9-2v15c-4-1-6 0-9 2-3-2-5-3-9-2Z"/>',
@@ -90,7 +131,7 @@ function renderHome() {
   const active = progress.session && !progress.session.submitted;
   return heading(course.title || 'Platz für dein nächstes Thema.', course.description || 'Ein Ort für dein Wissen. Und alles, was du noch lernen wirst.', course.subject || 'DEIN PERSÖNLICHER LERNRAUM') + `<div class="dashboard"><div><section class="hero"><div class="hero-copy"><div class="eyebrow">${hasTopics ? 'SCHRITT FÜR SCHRITT' : 'ALLES BEGINNT MIT NEUGIER'}</div><h2>${hasTopics ? 'Dein Thema. Dein Tempo.' : 'Dein nächster Aha-Moment<br>wartet schon.'}</h2><p>${hasTopics ? 'Entdecke deine Lernziele, vertiefe dein Wissen und finde deinen eigenen Lernrhythmus.' : 'Hier bekommt dein nächstes Prüfungsthema<br>seinen eigenen Platz.'}</p>${hasTopics ? `<a class="btn" href="${active ? '#session' : '#learn'}" style="margin-top:17px">${active ? 'Einheit fortsetzen' : 'Lernwissen öffnen'} ${icon('arrow')}</a>` : '<span class="hero-tag"><span class="status-dot"></span> Noch kein Thema hinzugefügt</span>'}</div>${art()}</section><div class="section-heading"><h2>Lernziele</h2><span>${course.topics.filter(t => progress.read[t.id]).length} / ${course.topics.length} gelesen</span></div>${hasTopics ? `<div class="grid">${course.topics.map((t, i) => `<a class="panel goal-card" href="${topicLink(t.id)}"><div class="row spread"><span class="eyebrow">LERNZIEL ${String(i + 1).padStart(2, '0')}</span>${icon('book')}</div>${t.blocks.find(b => b.type === 'image') ? `<img class="goal-image" src="${e(safeURL(t.blocks.find(b => b.type === 'image').src, true))}" alt="" loading="lazy">` : ''}<h3>${e(t.title)}</h3>${t.summary ? `<p>${e(t.summary)}</p>` : ''}<div class="card-bottom row spread"><span>${progress.read[t.id] ? 'Gelesen · weiter vertiefen' : 'Lernwissen entdecken'}</span>${icon('arrow')}</div></a>`).join('')}</div>` : `<section class="empty-goals">${art(true)}<h3>Hier wachsen deine Lernziele.</h3><p>Wenn dein Thema hinzukommt, findest du hier alle<br>Lernziele und das passende Wissen dazu.</p></section>`}<div class="feature-strip">${[['learn', 'book', 'Wissen entdecken', 'Verstehen statt auswendig lernen'], ['practice', 'pen', 'In Ruhe üben', 'Aufgaben in deinem Tempo'], ['exam', 'exam', 'Dich selbst testen', 'Digital oder auf Papier']].map(([url, ic, title, desc]) => `<a class="feature-link" href="#${url}"><span class="feature-icon">${icon(ic)}</span><span><strong>${title}</strong><small>${desc}</small></span></a>`).join('')}</div></div><aside>${statsPanel()}</aside></div>`;
 }
-function renderQuestionMedia(q, interactive = false) { return q.type === 'hotspot' ? renderHotspots(q, interactive) : renderMedia(q.media, true); }
+function renderQuestionMedia(q, interactive = false, zoomable = true) { return q.type === 'hotspot' ? renderHotspots(q, interactive, zoomable) : renderMedia(q.media, true); }
 function renderMedia(media, eager = false) {
   if (!media) return '';
   if (Array.isArray(media)) return `<div class="media-gallery">${media.map(item => renderMedia(item, eager)).join('')}</div>`;
@@ -180,6 +221,7 @@ function renderCards() {
   return heading('Ein Gedanke. Eine Karte.', topicTitle(card.topicId), 'LERNKARTEN') + `<section class="panel flashcard"><span class="badge">${cardIndex + 1} / ${course.flashcards.length}</span><h2 style="margin-top:25px">${e(cardFlipped ? card.back : card.front)}</h2>${btn(cardFlipped ? 'Frage anzeigen' : 'Antwort aufdecken', 'flip-card', '', 'primary')}</section><div class="row spread" style="margin-top:22px">${btn('Vorherige', 'card', '-1')}${btn('Nächste ' + icon('arrow'), 'card', '1')}</div>`;
 }
 function render(focus = false) {
+  if ($('#image-viewer').open) $('#image-viewer').close();
   nav();
   const views = { home: renderHome, learn: renderLearn, practice: () => renderConfig('practice'), exam: () => renderConfig('exam'), session: renderSession, progress: renderProgress, settings: renderSettings, sources: renderSources, cards: renderCards };
   $('#main').innerHTML = (views[view] || renderHome)();
@@ -238,7 +280,7 @@ function tick() {
 async function printTest() {
   const s = progress.session; if (!s) return;
   const solutions = $('#include-solutions')?.checked;
-  $('#print-area').innerHTML = `<div class="print-header"><p>LERNORIX · PRÜFUNG</p><h1>${e(course.title || 'Übungstest')}</h1><p>${s.questions.length} Aufgaben · ${LEVELS[s.level] || 'Gemischt'} · ${s.plannedMinutes ? s.plannedMinutes + ' Minuten' : s.deadline ? Math.round((s.deadline - s.createdAt) / 60000) + ' Minuten' : 'Ohne Zeitlimit'}</p><p class="version-label">Version ${e(s.id)} · ${new Date(s.createdAt).toLocaleDateString('de-CH')}</p><div class="print-meta"><span>Name:</span><span>Datum:</span><span>Punkte: ____ / ${s.questions.length}</span></div></div>${s.questions.map((q, i) => `<section class="print-question"><p class="small">${e(topicTitle(q.topicId))} · ${LEVELS[q.level]} · 1 Punkt</p><h3>${i + 1}. ${e(q.prompt)}</h3>${renderQuestionMedia(q)}${isActivity(q) ? activityPrint(q) : q.type === 'choice' ? q.optionOrder.map(n => `<div class="print-option">☐ ${e(q.options[n])}</div>`).join('') : '<div class="answer-lines"></div>'}</section>`).join('')}${solutions ? `<section class="print-solution"><h1>Lösungsblatt</h1><p class="version-label">${e(course.title)} · Version ${e(s.id)}</p>${s.questions.map((q, i) => `<section class="print-question"><h3>${i + 1}. ${e(q.prompt)}</h3><div>${solution(q)}</div>${q.type === 'open' ? '<p>Selbsteinschätzung anhand der Kriterien: 0 / 0,5 / 1 Punkt.</p>' : ''}${q.explanation ? `<p>${e(q.explanation)}</p>` : ''}</section>`).join('')}</section>` : ''}`;
+  $('#print-area').innerHTML = `<div class="print-header"><p>LERNORIX · PRÜFUNG</p><h1>${e(course.title || 'Übungstest')}</h1><p>${s.questions.length} Aufgaben · ${LEVELS[s.level] || 'Gemischt'} · ${s.plannedMinutes ? s.plannedMinutes + ' Minuten' : s.deadline ? Math.round((s.deadline - s.createdAt) / 60000) + ' Minuten' : 'Ohne Zeitlimit'}</p><p class="version-label">Version ${e(s.id)} · ${new Date(s.createdAt).toLocaleDateString('de-CH')}</p><div class="print-meta"><span>Name:</span><span>Datum:</span><span>Punkte: ____ / ${s.questions.length}</span></div></div>${s.questions.map((q, i) => `<section class="print-question"><p class="small">${e(topicTitle(q.topicId))} · ${LEVELS[q.level]} · 1 Punkt</p><h3>${i + 1}. ${e(q.prompt)}</h3>${renderQuestionMedia(q, false, false)}${isActivity(q) ? activityPrint(q) : q.type === 'choice' ? q.optionOrder.map(n => `<div class="print-option">☐ ${e(q.options[n])}</div>`).join('') : '<div class="answer-lines"></div>'}</section>`).join('')}${solutions ? `<section class="print-solution"><h1>Lösungsblatt</h1><p class="version-label">${e(course.title)} · Version ${e(s.id)}</p>${s.questions.map((q, i) => `<section class="print-question"><h3>${i + 1}. ${e(q.prompt)}</h3><div>${solution(q)}</div>${q.type === 'open' ? '<p>Selbsteinschätzung anhand der Kriterien: 0 / 0,5 / 1 Punkt.</p>' : ''}${q.explanation ? `<p>${e(q.explanation)}</p>` : ''}</section>`).join('')}</section>` : ''}`;
   try { await Promise.all([...$('#print-area').querySelectorAll('img')].map(img => img.decode())); }
   catch { toast('Ein Testbild konnte nicht geladen werden. Bitte prüfe die Bilder und drucke erneut.'); return; }
   window.print();
